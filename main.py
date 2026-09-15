@@ -2,6 +2,12 @@
 """Baixa o áudio de vídeos e playlists do YouTube e converte para MP3 (320 kbps)."""
 
 import os
+import sys
+
+_VENV_PYTHON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "venv", "bin", "python3")
+if not os.environ.get("VIRTUAL_ENV") and os.path.exists(_VENV_PYTHON):
+    os.execv(_VENV_PYTHON, [_VENV_PYTHON] + sys.argv)
+
 import re
 import shutil
 
