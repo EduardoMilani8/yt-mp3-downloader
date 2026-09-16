@@ -10,6 +10,9 @@ venv/
 env/
 .env
 
+# Configuração local do app
+.yt-mp3-config.json
+
 # Arquivos de áudio baixados
 *.mp3
 *.m4a

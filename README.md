@@ -1,23 +1,57 @@
 # yt-mp3-downloader
 
 Baixa o áudio de vídeos e playlists do YouTube e converte automaticamente
-para MP3 (320 kbps), salvando direto na pasta que você escolher.
+para MP3, salvando direto na pasta que você escolher.
 
 Feito para uso pessoal — ideal para colocar músicas em um MP3 player físico.
 
 ## Como funciona
 
 1. O programa inicia e fica aguardando você colar um link do YouTube.
-2. Você escolhe a pasta de destino em um seletor nativo do sistema.
+2. Para cada lote, você escolhe a pasta de destino — as pastas escolhidas
+   ficam **salvas** e aparecem num menu numerado nas próximas vezes.
 3. O áudio é baixado com `yt-dlp` e convertido para MP3 com `ffmpeg`.
    - Link de **vídeo único**: baixa 1 MP3 com o título do vídeo.
    - Link de **playlist** (contém `list=`): baixa cada vídeo como um MP3 separado.
-4. O progresso do download aparece no terminal.
-5. Ao final, mostra o(s) nome(s) do(s) arquivo(s) e o caminho onde foram salvos.
-6. Digite `sair` a qualquer momento para encerrar.
+4. O progresso do download aparece numa **barra visual** com velocidade e
+   tempo restante.
+5. Os arquivos são **renomeados no padrão `Musica - Artista`** (ex.:
+   `Believer - Imagine Dragons.mp3`), detectando o artista a partir dos
+   metadados, do canal (`- Topic`) ou do próprio título.
+6. Ao final, mostra o(s) nome(s) do(s) arquivo(s) e o caminho onde foram salvos.
+7. Digite `sair` a qualquer momento para encerrar.
 
-Os nomes dos arquivos usam o título do vídeo, já sanitizado pelo `yt-dlp`
-(remove caracteres inválidos para nome de arquivo).
+É possível baixar **vários links de uma vez**: cole os links um por linha
+e termine com uma linha em branco para iniciar a fila.
+
+## Nomes dos arquivos
+
+O padrão é `Musica - Artista` (configurável em `.yt-mp3-config.json` na chave
+`filename_template`). A ordem de resolução é:
+
+1. Metadados `track` + `artist` fornecidos pelo YouTube.
+2. Canal automático `Artista - Topic` → artista = canal, música = título.
+3. Título com ` - ` → detecta qual lado bate com o nome do canal/uploader.
+4. Sem informação → usa o título como veio (após limpeza de ruído).
+
+Ruídos comuns são removidos automaticamente: `(Official Video)`, `(Lyrics)`,
+`(Audio)`, `[4K]`, etc. Nomes duplicados ganham sufixo ` (2)`, ` (3)`...
+
+## Comandos dentro do programa
+
+| Comando | O que faz |
+| --- | --- |
+| `/help` | Mostra a ajuda |
+| `/pastas` | Gerencia pastas salvas (adicionar/remover) |
+| `/config` | Troca o bitrate dos MP3 (128/192/320) |
+| `/arquivo <caminho.txt>` | Baixa uma lista de links de um arquivo (um por linha) |
+| `sair` | Encerra o programa |
+
+## Configuração
+
+A configuração fica em `.yt-mp3-config.json` (na mesma pasta do app) e guarda
+as pastas salvas, a última pasta usada, o bitrate e o modelo de nome.
+Ela é gerida pelos próprios comandos acima — não precisa editar na mão.
 
 ## Requisitos
 
@@ -54,6 +88,7 @@ instruções caso não esteja.
 ## Dependências
 
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) — download e extração de áudio
+- `tqdm` — barra de progresso visual
 - `tkinter` — seletor de pasta nativo (já incluído na maioria das instalações
   de Python; no Debian/Ubuntu: `sudo apt install python3-tk`)
 - `ffmpeg` — conversão para MP3 (invocado internamente pelo yt-dlp)
