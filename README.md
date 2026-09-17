@@ -85,10 +85,32 @@ python main.py
 O programa verifica se o `ffmpeg` está instalado logo no início e dá
 instruções caso não esteja.
 
+## Interface web
+
+Além do terminal, o programa tem uma interface web simples que roda no
+seu navegador:
+
+```bash
+python web_app.py
+```
+
+O servidor sobe em `http://127.0.0.1:8000` e abre o navegador
+automaticamente. Lá você pode:
+
+- colar **vários links** (um por linha) e baixar de uma vez;
+- escolher a pasta de destino (digite o caminho, use uma pasta salva ou
+  clique em **"Escolher pasta…"**, que abre o seletor nativo do sistema);
+- **salvar pastas** para reutilizar depois;
+- trocar o **bitrate** (128/192/320 kbps);
+- acompanhar o **progresso** de cada item em tempo real, com cancelamento.
+
+Para usar outra porta: `YT_MP3_PORT=9000 python web_app.py`.
+
 ## Dependências
 
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) — download e extração de áudio
 - `tqdm` — barra de progresso visual
+- `flask` — interface web (opcional; só o terminal não precisa)
 - `tkinter` — seletor de pasta nativo (já incluído na maioria das instalações
   de Python; no Debian/Ubuntu: `sudo apt install python3-tk`)
 - `ffmpeg` — conversão para MP3 (invocado internamente pelo yt-dlp)

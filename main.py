@@ -9,7 +9,7 @@ _VENV_ROOT = os.path.normpath(os.path.join(os.path.dirname(_VENV_PYTHON), os.par
 _IN_VENV = os.environ.get("VIRTUAL_ENV") or (
     sys.prefix and os.path.realpath(sys.prefix) == os.path.realpath(_VENV_ROOT)
 )
-if not _IN_VENV and os.path.exists(_VENV_PYTHON):
+if __name__ == "__main__" and not _IN_VENV and os.path.exists(_VENV_PYTHON):
     os.execv(_VENV_PYTHON, [_VENV_PYTHON] + sys.argv)
 
 import json
@@ -508,12 +508,27 @@ class ProgressState:
         self.bar = None
 
 
-def make_progress_hook(state):
-    """Barra de progresso (tqdm) com percentual, velocidade e tempo restante."""
+def make_progress_hook(state, progress_callback=None):
+    """Hook de progresso: barra tqdm no terminal ou callback na interface web."""
     def hook(d):
-        if d["status"] == "downloading":
-            total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
-            done = d.get("downloaded_bytes") or 0
+        status = d.get("status")
+        total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
+        done = d.get("downloaded_bytes") or 0
+
+        if progress_callback is not None:
+            if status == "downloading":
+                progress_callback(
+                    "downloading",
+                    done=done,
+                    total=total,
+                    speed=d.get("speed"),
+                    eta=d.get("eta"),
+                )
+            elif status == "finished":
+                progress_callback("finished")
+            return
+
+        if status == "downloading":
             if state.bar is None:
                 state.bar = tqdm(
                     total=total or None,
@@ -534,7 +549,7 @@ def make_progress_hook(state):
                 parts.append(f"restam {eta}")
             if parts:
                 state.bar.set_postfix_str(" · ".join(parts), refresh=False)
-        elif d["status"] == "finished":
+        elif status == "finished":
             if state.bar is not None:
                 if state.bar.total:
                     state.bar.update(state.bar.total - state.bar.n)
@@ -570,8 +585,13 @@ def make_post_hook(folder, config, final_files):
     return hook
 
 
-def download_audio(url, folder, config):
-    """Baixa o(s) áudio(s), converte para MP3 e renomeia para o padrão."""
+def download_audio(url, folder, config, progress_callback=None):
+    """Baixa o(s) áudio(s), converte para MP3 e renomeia para o padrão.
+
+    Se 'progress_callback' for fornecido (usado pela interface web), ela é
+    chamada com os eventos "downloading" e "finished" em vez de exibir a
+    barra tqdm do terminal.
+    """
     final_files = []
     state = ProgressState()
     logger = ErrorLogger()
@@ -585,7 +605,7 @@ def download_audio(url, folder, config):
                 "preferredquality": config.get("bitrate", "320"),
             }
         ],
-        "progress_hooks": [make_progress_hook(state)],
+        "progress_hooks": [make_progress_hook(state, progress_callback)],
         "postprocessor_hooks": [make_post_hook(folder, config, final_files)],
         "logger": logger,
         "noplaylist": not is_playlist(url),

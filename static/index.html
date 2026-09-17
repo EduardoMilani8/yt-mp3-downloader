@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>yt-mp3-downloader</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --border: #d9dce1;
+    --text: #1f2328;
+    --muted: #6a737d;
+    --primary: #2f6fed;
+    --primary-dark: #2459c4;
+    --ok: #1a7f37;
+    --warn: #b7791f;
+    --err: #c0392b;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.45;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { margin-bottom: 16px; }
+  h1 { font-size: 22px; margin: 0 0 2px; }
+  .sub { color: var(--muted); margin: 0; font-size: 14px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  label { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  textarea, input[type="text"], select {
+    width: 100%;
+    font: inherit;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text);
+  }
+  textarea { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .row > * { min-width: 0; }
+  .grow { flex: 1; }
+
+  .btn {
+    font: inherit;
+    font-weight: 600;
+    font-size: 13.5px;
+    padding: 9px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .btn:hover { background: #f0f2f5; }
+  .btn.ghost { background: transparent; }
+  .btn.primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+  }
+  .btn.primary:hover { background: var(--primary-dark); }
+  .btn.big { width: 100%; padding: 13px; font-size: 15px; margin-top: 4px; }
+  .btn.small { padding: 5px 10px; font-size: 12.5px; }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+
+  .chips { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #eef1f6; border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px 6px 4px 11px; font-size: 12.5px;
+    cursor: pointer;
+  }
+  .chip:hover { background: #e4e9f1; }
+  .chip .x {
+    border: 0; background: transparent; color: var(--muted);
+    cursor: pointer; font-size: 14px; line-height: 1; padding: 2px 5px;
+    border-radius: 50%;
+  }
+  .chip .x:hover { color: var(--err); background: #fdecea; }
+
+  .notice {
+    padding: 10px 12px; border-radius: 8px; margin-bottom: 12px;
+    font-size: 13.5px; background: #fff4e2; border: 1px solid #f0d59a;
+    color: #7c4c08;
+  }
+  .notice.hidden { display: none; }
+
+  .ptitle { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .ptitle h2 { margin: 0; font-size: 15px; }
+
+  .item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background: #fafbfc;
+  }
+  .item-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+  .item-url {
+    font-size: 12.5px; color: var(--text); word-break: break-all;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  .item-url .n { color: var(--muted); margin-right: 6px; }
+  .st {
+    flex-shrink: 0; font-size: 11.5px; font-weight: 700;
+    padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+  }
+  .st-pending    { background: #eceff3; color: #57606a; }
+  .st-downloading{ background: #dbe6ff; color: var(--primary-dark); }
+  .st-converting { background: #fff0d6; color: #8a5a08; }
+  .st-done       { background: #dafbe1; color: var(--ok); }
+  .st-error      { background: #ffebe9; color: var(--err); }
+  .st-cancelled  { background: #eceff3; color: #57606a; }
+
+  .progress {
+    height: 7px; background: #e6e9ee; border-radius: 999px;
+    overflow: hidden; margin-top: 10px;
+  }
+  .progress .bar {
+    height: 100%; width: 0; background: var(--primary);
+    border-radius: 999px; transition: width .35s ease;
+  }
+  .meta { margin-top: 7px; font-size: 12px; color: var(--muted); min-height: 15px; }
+  .meta.err { color: var(--err); }
+
+  .file-list { margin-top: 8px; font-size: 12.5px; color: var(--text); }
+  .file-list .base { color: var(--ok); font-weight: 600; }
+
+  .summary {
+    margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);
+  }
+  .summary h3 { margin: 0 0 6px; font-size: 14px; }
+  .summary ul { margin: 4px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--text); }
+  .summary .folder { color: var(--muted); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <h1>yt-mp3-downloader</h1>
+    <p class="sub">Baixe o áudio do YouTube como MP3</p>
+  </header>
+
+  <section class="card">
+    <label for="links">Links (um por linha)</label>
+    <textarea id="links" rows="6"
+      placeholder="https://www.youtube.com/watch?v=&#8230;&#10;&#10;Vídeos e playlists funcionam. Cole vários de uma vez."></textarea>
+  </section>
+
+  <section class="card">
+    <label for="folder-path">Pasta de destino</label>
+    <input id="folder-path" type="text" placeholder="/home/voce/Musica" autocomplete="off" />
+    <div class="row">
+      <select id="folder-select" class="grow" aria-label="Pastas salvas">
+        <option value="">&#8212; escolher pasta salva &#8212;</option>
+      </select>
+    </div>
+    <div class="row">
+      <button id="pick-folder" class="btn grow" type="button">Escolher pasta&#8230;</button>
+      <button id="save-folder" class="btn ghost" type="button">Salvar esta pasta</button>
+    </div>
+    <div id="chips" class="chips"></div>
+  </section>
+
+  <div class="card row" style="align-items:end">
+    <div class="grow">
+      <label for="bitrate">Qualidade</label>
+      <select id="bitrate">
+        <option value="320">320 kbps</option>
+        <option value="192">192 kbps</option>
+        <option value="128">128 kbps</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="notice" class="notice hidden"></div>
+
+  <button id="download" class="btn primary big" type="button">Baixar MP3</button>
+
+  <section id="panel" class="card" style="margin-top:14px" hidden>
+    <div class="ptitle">
+      <h2>Progresso</h2>
+      <button id="cancel" class="btn ghost small" type="button">Cancelar</button>
+    </div>
+    <div id="items"></div>
+    <div id="summary" class="summary" hidden></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var savedFolders = [];
+  var lastFolder = null;
+  var jobId = null;
+  var pollTimer = null;
+
+  var linksEl = document.getElementById("links");
+  var folderPathEl = document.getElementById("folder-path");
+  var folderSelectEl = document.getElementById("folder-select");
+  var pickBtn = document.getElementById("pick-folder");
+  var saveBtn = document.getElementById("save-folder");
+  var chipsEl = document.getElementById("chips");
+  var bitrateEl = document.getElementById("bitrate");
+  var downloadBtn = document.getElementById("download");
+  var cancelBtn = document.getElementById("cancel");
+  var noticeEl = document.getElementById("notice");
+  var panelEl = document.getElementById("panel");
+  var itemsEl = document.getElementById("items");
+  var summaryEl = document.getElementById("summary");
+
+  function esc(s) {
+    var d = document.createElement("div");
+    d.textContent = String(s == null ? "" : s);
+    return d.innerHTML;
+  }
+
+  function notice(msg) {
+    if (msg) {
+      noticeEl.textContent = msg;
+      noticeEl.classList.remove("hidden");
+    } else {
+      noticeEl.classList.add("hidden");
+    }
+  }
+
+  async function api(path, opts) {
+    opts = opts || {};
+    var res = await fetch(path, {
+      headers: { "Content-Type": "application/json" },
+      method: opts.method || "GET",
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+    var data;
+    try { data = await res.json(); } catch (e) { data = { ok: false, error: "resposta inválida do servidor" }; }
+    if (!data.ok && !res.ok && (res.status === 400 || res.status === 404 || res.status === 500)) {
+      return data;
+    }
+    return data;
+  }
+
+  function renderChips() {
+    chipsEl.innerHTML = "";
+    savedFolders.forEach(function (f) {
+      var chip = document.createElement("span");
+      chip.className = "chip";
+      chip.title = f.path;
+      chip.innerHTML = esc(f.name);
+      chip.addEventListener("click", function () {
+        folderPathEl.value = f.path;
+      });
+      var x = document.createElement("button");
+      x.className = "x";
+      x.setAttribute("aria-label", "remover " + f.name);
+      x.textContent = "\u00d7";
+      x.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        removeFolder(f);
+      });
+      chip.appendChild(x);
+      chipsEl.appendChild(chip);
+    });
+  }
+
+  function renderFolderSelect() {
+    folderSelectEl.innerHTML = "";
+    var opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "\u2014 escolher pasta salva \u2014";
+    folderSelectEl.appendChild(opt);
+    if (lastFolder) {
+      var sub = document.createElement("optgroup");
+      sub.label = "Salvas";
+      var o = document.createElement("option");
+      o.value = "__last__";
+      o.textContent = "(última usada)  " + lastFolder;
+      sub.appendChild(o);
+      savedFolders.forEach(function (f) {
+        var op = document.createElement("option");
+        op.value = f.path;
+        op.textContent = f.name;
+        sub.appendChild(op);
+      });
+      folderSelectEl.appendChild(sub);
+    } else {
+      savedFolders.forEach(function (f) {
+        var op = document.createElement("option");
+        op.value = f.path;
+        op.textContent = f.name;
+        folderSelectEl.appendChild(op);
+      });
+    }
+  }
+
+  folderSelectEl.addEventListener("change", function () {
+    var v = folderSelectEl.value;
+    if (v === "__last__") { if (lastFolder) folderPathEl.value = lastFolder; }
+    else if (v) folderPathEl.value = v;
+  });
+
+  folderPathEl.addEventListener("input", function () { folderSelectEl.value = ""; });
+
+  async function loadConfig() {
+    var cfg = await api("/api/config");
+    bitrateEl.value = cfg.bitrate || "320";
+    savedFolders = cfg.saved_folders || [];
+    lastFolder = cfg.last_folder || null;
+    if (lastFolder) folderPathEl.value = lastFolder;
+    renderChips();
+    renderFolderSelect();
+  }
+
+  pickBtn.addEventListener("click", async function () {
+    pickBtn.disabled = true;
+    try {
+      var r = await api("/api/folder/pick", { method: "POST", body: {} });
+      if (r.ok) { folderPathEl.value = r.path; folderSelectEl.value = ""; }
+      else notice(r.error);
+    } finally { pickBtn.disabled = false; }
+  });
+
+  saveBtn.addEventListener("click", async function () {
+    var path = folderPathEl.value.trim();
+    if (!path) { notice("Informe o caminho da pasta para salvar."); return; }
+    var r = await api("/api/folders", { method: "POST", body: { path: path } });
+    if (!r.ok) { notice(r.error); return; }
+    savedFolders = r.folders;
+    renderChips();
+    renderFolderSelect();
+    notice(null);
+  });
+
+  async function removeFolder(f) {
+    var r = await api("/api/folders/" + encodeURIComponent(f.name), { method: "DELETE" });
+    if (!r.ok) { notice(r.error); return; }
+    savedFolders = r.folders;
+    renderChips();
+    renderFolderSelect();
+  }
+
+  bitrateEl.addEventListener("change", function () {
+    api("/api/config", { method: "POST", body: { bitrate: bitrateEl.value } }).catch(function () {});
+    notice(null);
+  });
+
+  // -------- formato inteligente (bytes / velocidade / eta) --------
+  function fmtBytes(n) {
+    if (!n) return "0 B";
+    var units = ["B", "KB", "MB", "GB"];
+    var i = 0;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+    var digits = n >= 10 || i === 0 ? 0 : 1;
+    return n.toFixed(digits) + " " + units[i];
+  }
+  function fmtSpeed(s) { return s ? fmtBytes(s) + "/s" : ""; }
+  function fmtEta(s) {
+    if (!s || s <= 0) return "";
+    var m = Math.floor(s / 60), r = Math.floor(s % 60);
+    return m ? "restam " + m + "m " + String(r).padStart(2, "0") + "s" : "restam " + r + "s";
+  }
+
+  var ST = {
+    pending:     ["Pendente", "st-pending"],
+    downloading: ["Baixando", "st-downloading"],
+    converting:  ["Convertendo", "st-converting"],
+    done:        ["Salvo", "st-done"],
+    error:       ["Erro", "st-error"],
+    cancelled:   ["Cancelado", "st-cancelled"],
+  };
+
+  function base(path) {
+    var parts = String(path).split(/[\\/]/);
+    return parts[parts.length - 1];
+  }
+
+  function renderItem(item, idx) {
+    var el = document.createElement("div");
+    el.className = "item";
+    var meta = ST[item.status] || ST.pending;
+    var head = document.createElement("div");
+    head.className = "item-head";
+    head.innerHTML =
+      '<div class="item-url"><span class="n">' + (idx + 1) + '.</span>' + esc(item.url) + "</div>" +
+      '<span class="st ' + meta[1] + '">' + meta[0] + "</span>";
+    el.appendChild(head);
+
+    var barWrap = document.createElement("div");
+    barWrap.className = "progress";
+    var bar = document.createElement("div");
+    bar.className = "bar";
+    bar.style.width = Math.max(0, Math.min(100, item.percent || 0)) + "%";
+    barWrap.appendChild(bar);
+    barWrap.style.display = (item.status === "downloading" || item.status === "converting") ? "" : "none";
+    el.appendChild(barWrap);
+
+    var metaEl = document.createElement("div");
+    metaEl.className = item.status === "error" ? "meta err" : "meta";
+    var parts = [];
+    if (item.status === "downloading" && item.total_bytes) {
+      parts.push(fmtBytes(item.done_bytes) + " / " + fmtBytes(item.total_bytes) + " (" + Math.round(item.percent) + "%)");
+    }
+    var sp = fmtSpeed(item.speed);
+    if (sp) parts.push(sp);
+    var et = fmtEta(item.eta);
+    if (et) parts.push(et);
+    if (item.status === "error") parts.push(item.message || "Falha no download.");
+    if (item.status === "converting") parts.push("Convertendo para MP3\u2026");
+    if (item.status === "pending") parts.push("Aguardando na fila\u2026");
+    if (item.status === "done") {
+      parts.push(item.files[0] ? "Arquivo: " + base(item.files[0]) : "Concluído");
+      var extra = item.files.length - 1;
+      if (extra > 0) parts.push("+ " + extra + " arquivo(s)");
+    }
+    metaEl.textContent = parts.join(" \u00b7 ");
+    el.appendChild(metaEl);
+
+    return el;
+  }
+
+  function renderJob(job) {
+    itemsEl.innerHTML = "";
+    job.items.forEach(function (item, idx) {
+      itemsEl.appendChild(renderItem(item, idx));
+    });
+    if (job.done) {
+      summaryEl.hidden = false;
+      var ok = job.items.filter(function (i) { return i.status === "done"; }).length;
+      var err = job.items.filter(function (i) { return i.status === "error"; }).length;
+      var title = err ? "Concluído com " + err + " erro(s)" : "Tudo pronto!";
+      var html = "<h3>" + esc(title) + "</h3>";
+      html += '<div class="folder">Pasta: ' + esc(job.folder) + "</div>";
+      if (job.files.length) {
+        html += "<ul>" + job.files.map(function (f) { return "<li><span class=\"base\">" + esc(base(f)) + "</span></li>"; }).join("") + "</ul>";
+      }
+      if (!job.files.length && !err) html += "<div>Nenhum arquivo foi salvo.</div>";
+      summaryEl.innerHTML = html;
+    } else {
+      summaryEl.hidden = true;
+    }
+  }
+
+  function poll() {
+    api("/api/jobs/" + jobId).then(function (r) {
+      if (!r.ok || !r.job) { stopPolling(); return; }
+      var job = r.job;
+      renderJob(job);
+      if (job.done) {
+        stopPolling();
+        downloadBtn.disabled = false;
+        cancelBtn.disabled = true;
+      } else {
+        pollTimer = setTimeout(poll, 1000);
+      }
+    }).catch(function () {
+      pollTimer = setTimeout(poll, 1500);
+    });
+  }
+
+  function stopPolling() {
+    if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+    jobId = null;
+  }
+
+  downloadBtn.addEventListener("click", async function () {
+    if (jobId) return;
+    var raw = linksEl.value.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
+    var folder = folderPathEl.value.trim();
+    var bitrate = bitrateEl.value;
+    if (!raw.length) { notice("Informe pelo menos um link do YouTube."); return; }
+    if (!folder) { notice("Escolha a pasta de destino (salva, digitada ou pelo botão)."); return; }
+    notice(null);
+
+    downloadBtn.disabled = true;
+    cancelBtn.disabled = false;
+    panelEl.hidden = false;
+    itemsEl.innerHTML = "";
+    summaryEl.hidden = true;
+
+    var r = await api("/api/jobs", {
+      method: "POST",
+      body: { links: raw, folder: folder, bitrate: bitrate },
+    });
+    if (!r.ok) {
+      notice(r.error || "Não foi possível iniciar o download.");
+      downloadBtn.disabled = false;
+      cancelBtn.disabled = true;
+      return;
+    }
+    jobId = r.id;
+    poll();
+  });
+
+  cancelBtn.addEventListener("click", async function () {
+    if (jobId) await api("/api/jobs/" + jobId + "/cancel", { method: "POST" });
+    cancelBtn.disabled = true;
+    notice("Cancelando\u2026 o item em andamento termina antes de parar.");
+  });
+
+  loadConfig();
+})();
+</script>
+</body>
+</html>
